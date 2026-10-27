@@ -1,5 +1,5 @@
 'use strict';
-let report,mechanismsOpen=false;const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let report,mechanismsOpen=true;const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const link=(url,text)=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
 const refs=ids=>`<span class="refs">${ids.map(id=>{let i=report.sources.findIndex(s=>s.id===id),s=report.sources[i];return s?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" title="${esc(s.title)}" aria-label="Source ${i+1}: ${esc(s.title)}">${i+1}</a>`:''}).join('')}</span>`;
 const tag=(s,c='')=>`<span class="tag ${c}">${esc(s)}</span>`;
@@ -52,7 +52,7 @@ function censusView(){
  if(!leads&&chosen.length)rows=rows.filter(r=>chosen.every(id=>labelMember(report.practiceLabels.find(l=>l.id===id),r.p.id,basis)));
  rows.sort((a,b)=>(a.p?.name||a.name||'').localeCompare(b.p?.name||b.name||''));
  const url=(changes)=>{const u=new URLSearchParams(q);u.set('view','practices');for(const [k,v]of Object.entries(changes))if(k!=='page')u.set(k,v);u.delete('page');return '?'+u};
- return `<div class="mobile-controls-bar"><span>${rows.length} workflows · ${esc(dim==='runtime'?'Resources & IPC':dim.charAt(0).toUpperCase()+dim.slice(1))}</span><button type="button" id="toggle-survey-controls" aria-controls="survey-controls" aria-expanded="true">Hide controls ↑</button></div><div id="survey-controls"><div class="survey-heading"><h2>Current practices <span>${rows.length}</span></h2>${cohort?`<a href="${url({cohort:''})}">All workflows</a>`:''}${selected?`<a href="${url({project:'',page:0})}">← All workflows</a>`:''}</div>
+ return `<div class="mobile-controls-bar"><span>${rows.length} workflows · ${esc(dim==='runtime'?'Resources & IPC':dim.charAt(0).toUpperCase()+dim.slice(1))}</span></div><div id="survey-controls"><div class="survey-heading"><h2>Current practices <span>${rows.length}</span></h2>${cohort?`<a href="${url({cohort:''})}">All workflows</a>`:''}${selected?`<a href="${url({project:'',page:0})}">← All workflows</a>`:''}</div>
  <form id="census-filter" class="census-filters"><input name="q" aria-label="Search current practices" placeholder="Search hardware, software, or workflow…" value="${esc(q.get('q')||'')}"><input type="hidden" name="dimension" value="${dim}">${cohort?`<input type="hidden" name="cohort" value="${esc(cohort)}">`:""}<input type="hidden" name="labels" value="${esc(q.get('labels')||'')}">${selected?`<input type="hidden" name="project" value="${esc(selected)}">`:""}<select name="kind" aria-label="Research population"><option value="all" ${kind==='all'?'selected':''}>Labs + companies</option><option value="labs" ${kind==='labs'?'selected':''}>Labs / projects</option><option value="companies" ${kind==='companies'?'selected':''}>Companies</option></select><select name="country" aria-label="Country"><option value="">All countries</option>${[...new Set([...report.census.labs.map(r=>r.country),...all.map(r=>r.country)].filter(Boolean))].sort().map(c=>`<option ${c===country?'selected':''}>${esc(c)}</option>`).join('')}</select><select name="stage" aria-label="Evidence filter"><option value="survey" ${stage==='survey'?'selected':''}>Physical / company evidence</option><option value="all" ${stage==='all'?'selected':''}>Include reference workflows</option></select></form>
  ${leads?'':`<div class="dimension-tabs">${Object.entries({overview:'Overview',hardware:'▣ Compute',runtime:'⚙ Resources & IPC',lifecycle:'↻ Lifecycle',recording:'◉ Recording'}).map(([k,v])=>`<a class="button ${dim===k?'selected':''}" href="${url({dimension:k,page:0})}">${v}</a>`).join('')}</div>`}
  </div>${leads?'':labelSummary(baseRows,dim,q,url)}
@@ -171,8 +171,8 @@ function currentSynthesis(){
 
 // The table owns vertical scrolling; keep its controls recoverable on short screens.
 function setupMobileControls(){
- const table=document.querySelector('.survey-table'),button=document.querySelector('#toggle-survey-controls');
- if(!table||!button)return;
+ const table=document.querySelector('.survey-table'),bar=document.querySelector('.mobile-controls-bar');
+ if(!table||!bar)return;
  const panel=document.querySelector('.label-summary');
  let mechanismButton;
  function showMechanisms(open){
@@ -186,7 +186,7 @@ function setupMobileControls(){
   mechanismButton.type='button';mechanismButton.className='mechanisms-toggle';
   mechanismButton.textContent='Mechanisms';
   mechanismButton.setAttribute('aria-controls',panel.id);
-  button.before(mechanismButton);
+  bar.append(mechanismButton);
   mechanismButton.addEventListener('click',()=>showMechanisms(!mechanismsOpen));
   const close=document.createElement('button');close.type='button';close.className='mechanisms-close';
   close.textContent='×';close.setAttribute('aria-label','Close mechanisms');
@@ -203,12 +203,9 @@ function setupMobileControls(){
   if(!mobile())return;
   if(value)showMechanisms(false);
   document.body.classList.toggle('controls-folded',value);
-  button.setAttribute('aria-expanded',String(!value));
-  button.textContent=value?'Show controls ↓':'Hide controls ↑';
   settling=true;
   requestAnimationFrame(()=>{last=table.scrollTop;travel=0;settling=false});
  }
- button.addEventListener('click',()=>fold(!document.body.classList.contains('controls-folded')));
  table.addEventListener('scroll',()=>{
   const y=table.scrollTop,delta=y-last;last=y;
   if(!mobile()||settling||!delta)return;
