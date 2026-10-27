@@ -52,10 +52,10 @@ function censusView(){
  if(!leads&&chosen.length)rows=rows.filter(r=>chosen.every(id=>labelMember(report.practiceLabels.find(l=>l.id===id),r.p.id,basis)));
  rows.sort((a,b)=>(a.p?.name||a.name||'').localeCompare(b.p?.name||b.name||''));
  const url=(changes)=>{const u=new URLSearchParams(q);u.set('view','practices');for(const [k,v]of Object.entries(changes))if(k!=='page')u.set(k,v);u.delete('page');return '?'+u};
- return `<div class="survey-heading"><h2>Current practices <span>${rows.length}</span></h2>${cohort?`<a href="${url({cohort:''})}">All workflows</a>`:''}${selected?`<a href="${url({project:'',page:0})}">← All workflows</a>`:''}</div>
+ return `<div class="mobile-controls-bar"><span>${rows.length} workflows · ${esc(dim==='runtime'?'Resources & IPC':dim.charAt(0).toUpperCase()+dim.slice(1))}</span><button type="button" id="toggle-survey-controls" aria-controls="survey-controls" aria-expanded="true">Hide controls ↑</button></div><div id="survey-controls"><div class="survey-heading"><h2>Current practices <span>${rows.length}</span></h2>${cohort?`<a href="${url({cohort:''})}">All workflows</a>`:''}${selected?`<a href="${url({project:'',page:0})}">← All workflows</a>`:''}</div>
  <form id="census-filter" class="census-filters"><input name="q" aria-label="Search current practices" placeholder="Search hardware, software, or workflow…" value="${esc(q.get('q')||'')}"><input type="hidden" name="dimension" value="${dim}">${cohort?`<input type="hidden" name="cohort" value="${esc(cohort)}">`:""}<input type="hidden" name="labels" value="${esc(q.get('labels')||'')}">${selected?`<input type="hidden" name="project" value="${esc(selected)}">`:""}<select name="kind" aria-label="Research population"><option value="all" ${kind==='all'?'selected':''}>Labs + companies</option><option value="labs" ${kind==='labs'?'selected':''}>Labs / projects</option><option value="companies" ${kind==='companies'?'selected':''}>Companies</option></select><select name="country" aria-label="Country"><option value="">All countries</option>${[...new Set([...report.census.labs.map(r=>r.country),...all.map(r=>r.country)].filter(Boolean))].sort().map(c=>`<option ${c===country?'selected':''}>${esc(c)}</option>`).join('')}</select><select name="stage" aria-label="Evidence filter"><option value="survey" ${stage==='survey'?'selected':''}>Physical / company evidence</option><option value="all" ${stage==='all'?'selected':''}>Include reference workflows</option></select></form>
  ${leads?'':`<div class="dimension-tabs">${Object.entries({overview:'Overview',hardware:'▣ Compute',runtime:'⚙ Resources & IPC',lifecycle:'↻ Lifecycle',recording:'◉ Recording'}).map(([k,v])=>`<a class="button ${dim===k?'selected':''}" href="${url({dimension:k,page:0})}">${v}</a>`).join('')}</div>`}
- ${leads?'':labelSummary(baseRows,dim,q,url)}
+ ${leads?'':labelSummary(baseRows,dim,q,url)}</div>
  <div class="table-wrap survey-table"><table><thead><tr><th>${leads?'Lab / group':'Workflow / evidence'}</th>${leads?'<th>Research area</th><th>Source access</th><th>Next sources</th>':fields[dim].map(f=>`<th>${f[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>leads?`<tr><td><strong>${link(r.url,r.name)}</strong><p>${esc(r.institution)} · ${esc(r.country)}</p></td><td>${esc(r.area)}</td><td>${tag(r.status==='Page fetched'?'Landing page reviewed':'Fetch failed',r.status==='Page fetched'?'':'amber')}<p>${r.deepReview?esc(r.deepReview.status)+' · '+esc(r.deepReview.followup):r.status==='Page fetched'?'Paper / repository investigation remains open.':esc(r.error)}</p></td><td>${r.links.slice(0,3).map(l=>link(l.url,l.title.slice(0,60))).join('<br>')}</td></tr>`:`<tr><td><strong><a href="${url({project:r.p.id,page:0})}">${esc(r.p.name)}</a></strong><p>${esc(r.p.org||r.name)} · ${esc(r.p.year)}</p>${r.p.company&&r.p.basics?`<small>${esc(r.p.basics)}</small>`:''}${r.p.deploymentClass&&r.p.deploymentClass!=='physical deployment'?`<small class="workflow-type">${esc(r.p.deploymentClass)}</small>`:''}<div class="workflow-evidence">${r.p.company&&r.p.companyId?`${r.p.website?link(r.p.website,'Company website ↗'):''}`:local(r.p.deep?'lab-project':'projects','Evidence ↗',r.p.id)} ${r.p.repo?link(r.p.repo,'Code ↗'):''}</div>${chosen.length?`<small class="label-match">${chosen.map(id=>{const l=report.practiceLabels.find(l=>l.id===id),m=labelMember(l,r.p.id,basis);return `<span title="${esc(m?.evidence||l.name)}">${esc(l.name)}${m?.basis==='option'?' · option/support':m?.basis==='hiring'?' · hiring evidence':m?.basis==='mention'?' · source mention':''}</span> ${refs(m?.sources||[])}`}).join('<br>')}</small>`:''}</td>${fields[dim].map(([,key,i])=>`<td>${practiceCell(r.sys[key][i])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5">No matching setups in the reviewed evidence.</td></tr>'}</tbody></table></div>
  ${selected&&rows.length===1?`<section class="workflow-boundary">${dim==='hardware'?`<strong>Deployment</strong>${practiceCell(rows[0].sys.hardware[0])}`:''}<strong>Inspection boundary</strong>${surveyCell(rows[0].sys[dim==='overview'?'hardware':dim][4])}</section>`:''}`;
 }
@@ -83,11 +83,11 @@ function render(){
  if(view==='projects'&&!q.get('project'))view='practices';
  if(!['practices','synthesis','sources','projects','lab-project'].includes(view))view='practices';
  if(q.get('view')!==view){q.set('view',view);history.replaceState({},'','?'+q)}
- document.body.dataset.view=view;const views=[['practices','Current practices'],['synthesis','Synthesis'],['sources','Sources']];
+ document.body.classList.remove('controls-folded');document.body.dataset.view=view;const views=[['practices','Current practices'],['synthesis','Synthesis'],['sources','Sources']];
  const active=['projects','lab-project'].includes(view)?'practices':view;
  $('#nav').innerHTML=views.map(([id,label])=>`<a class="${id===active?'active':''}" ${id===active?'aria-current="page"':''} href="?view=${id}">${label}</a>`).join('');
  $('#main').innerHTML=({practices:censusView,synthesis:currentSynthesis,sources:sourcesView,projects:()=>projects(q.get('project')),'lab-project':()=>deepProject(q.get('project'))}[view])();
- $('#status').textContent='Research snapshot · '+(report.cellAudit?.date||'2026-10-25')+' · '+report.sources.length+' source entries';$('#main').scrollTop=0;
+ $('#status').textContent='Research snapshot · '+(report.cellAudit?.date||'2026-10-25')+' · '+report.sources.length+' source entries';$('#main').scrollTop=0;setupMobileControls();
  document.title='Robotics Systems Survey · '+(views.find(v=>v[0]===active)?.[1]||'Workflow');
 }
 document.addEventListener('click',e=>{const a=e.target.closest('a');if(a&&a.getAttribute('href')?.startsWith('?')&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey){e.preventDefault();history.pushState({},'',a.href);render()}});window.addEventListener('popstate',()=>report&&render());fetch('./lab-research.json').then(r=>{if(!r.ok)throw Error('Report unavailable');return r.json()}).then(d=>{report=d;render()}).catch(e=>{$('#main').innerHTML=`<p class="empty">Unable to load the research. ${esc(e.message)} Please refresh.</p>`});
@@ -167,4 +167,30 @@ function currentSynthesis(){
  <div class="section-head insight-case-head"><div><h3>What existing stacks provide across an experiment</h3><span class="small muted">Six selected stacks · each cell opens its supporting workflow evidence</span></div></div>
  <div class="table-wrap insight-cases"><table><thead><tr><th>Workflow</th><th>① Setup & readiness</th><th>② Execution & recovery</th><th>③ Machine state & history</th><th>④ Recording & integrity</th><th>⑤ Identity & provenance</th><th>⑥ Analysis & comparison</th></tr></thead><tbody>${caseHtml}</tbody></table></div>
  <div class="insight-decision"><strong>Next evidence to collect</strong><span>For each team: one failed run, the missing evidence that blocked diagnosis, and who would adopt a fix.</span><a href="?view=practices&dimension=recording">Inspect all workflows →</a></div>`;
+}
+
+// The table owns vertical scrolling; keep its controls recoverable on short screens.
+function setupMobileControls(){
+ const table=document.querySelector('.survey-table'),button=document.querySelector('#toggle-survey-controls');
+ if(!table||!button)return;
+ const mobile=()=>matchMedia('(max-width: 750px)').matches;
+ if(mobile())document.querySelector('#census-filter input[name="q"]').placeholder='Search…';
+ let last=table.scrollTop,travel=0,settling=false;
+ function fold(value){
+  if(!mobile())return;
+  document.body.classList.toggle('controls-folded',value);
+  button.setAttribute('aria-expanded',String(!value));
+  button.textContent=value?'Show controls ↓':'Hide controls ↑';
+  settling=true;
+  requestAnimationFrame(()=>{last=table.scrollTop;travel=0;settling=false});
+ }
+ button.addEventListener('click',()=>fold(!document.body.classList.contains('controls-folded')));
+ table.addEventListener('scroll',()=>{
+  const y=table.scrollTop,delta=y-last;last=y;
+  if(!mobile()||settling||!delta)return;
+  travel=Math.sign(delta)===Math.sign(travel)?travel+delta:delta;
+  if(document.body.classList.contains('controls-folded')){
+   if(travel < -28||y===0)fold(false);
+  }else if(y>48&&travel>36&&!document.querySelector('#survey-controls :focus'))fold(true);
+ },{passive:true});
 }
