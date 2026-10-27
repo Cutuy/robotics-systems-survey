@@ -1,5 +1,5 @@
 'use strict';
-let report;const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let report,mechanismsOpen=false;const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const link=(url,text)=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
 const refs=ids=>`<span class="refs">${ids.map(id=>{let i=report.sources.findIndex(s=>s.id===id),s=report.sources[i];return s?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" title="${esc(s.title)}" aria-label="Source ${i+1}: ${esc(s.title)}">${i+1}</a>`:''}).join('')}</span>`;
 const tag=(s,c='')=>`<span class="tag ${c}">${esc(s)}</span>`;
@@ -55,7 +55,7 @@ function censusView(){
  return `<div class="mobile-controls-bar"><span>${rows.length} workflows · ${esc(dim==='runtime'?'Resources & IPC':dim.charAt(0).toUpperCase()+dim.slice(1))}</span><button type="button" id="toggle-survey-controls" aria-controls="survey-controls" aria-expanded="true">Hide controls ↑</button></div><div id="survey-controls"><div class="survey-heading"><h2>Current practices <span>${rows.length}</span></h2>${cohort?`<a href="${url({cohort:''})}">All workflows</a>`:''}${selected?`<a href="${url({project:'',page:0})}">← All workflows</a>`:''}</div>
  <form id="census-filter" class="census-filters"><input name="q" aria-label="Search current practices" placeholder="Search hardware, software, or workflow…" value="${esc(q.get('q')||'')}"><input type="hidden" name="dimension" value="${dim}">${cohort?`<input type="hidden" name="cohort" value="${esc(cohort)}">`:""}<input type="hidden" name="labels" value="${esc(q.get('labels')||'')}">${selected?`<input type="hidden" name="project" value="${esc(selected)}">`:""}<select name="kind" aria-label="Research population"><option value="all" ${kind==='all'?'selected':''}>Labs + companies</option><option value="labs" ${kind==='labs'?'selected':''}>Labs / projects</option><option value="companies" ${kind==='companies'?'selected':''}>Companies</option></select><select name="country" aria-label="Country"><option value="">All countries</option>${[...new Set([...report.census.labs.map(r=>r.country),...all.map(r=>r.country)].filter(Boolean))].sort().map(c=>`<option ${c===country?'selected':''}>${esc(c)}</option>`).join('')}</select><select name="stage" aria-label="Evidence filter"><option value="survey" ${stage==='survey'?'selected':''}>Physical / company evidence</option><option value="all" ${stage==='all'?'selected':''}>Include reference workflows</option></select></form>
  ${leads?'':`<div class="dimension-tabs">${Object.entries({overview:'Overview',hardware:'▣ Compute',runtime:'⚙ Resources & IPC',lifecycle:'↻ Lifecycle',recording:'◉ Recording'}).map(([k,v])=>`<a class="button ${dim===k?'selected':''}" href="${url({dimension:k,page:0})}">${v}</a>`).join('')}</div>`}
- ${leads?'':labelSummary(baseRows,dim,q,url)}</div>
+ </div>${leads?'':labelSummary(baseRows,dim,q,url)}
  <div class="table-wrap survey-table"><table><thead><tr><th>${leads?'Lab / group':'Workflow / evidence'}</th>${leads?'<th>Research area</th><th>Source access</th><th>Next sources</th>':fields[dim].map(f=>`<th>${f[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>leads?`<tr><td><strong>${link(r.url,r.name)}</strong><p>${esc(r.institution)} · ${esc(r.country)}</p></td><td>${esc(r.area)}</td><td>${tag(r.status==='Page fetched'?'Landing page reviewed':'Fetch failed',r.status==='Page fetched'?'':'amber')}<p>${r.deepReview?esc(r.deepReview.status)+' · '+esc(r.deepReview.followup):r.status==='Page fetched'?'Paper / repository investigation remains open.':esc(r.error)}</p></td><td>${r.links.slice(0,3).map(l=>link(l.url,l.title.slice(0,60))).join('<br>')}</td></tr>`:`<tr><td><strong><a href="${url({project:r.p.id,page:0})}">${esc(r.p.name)}</a></strong><p>${esc(r.p.org||r.name)} · ${esc(r.p.year)}</p>${r.p.company&&r.p.basics?`<small>${esc(r.p.basics)}</small>`:''}${r.p.deploymentClass&&r.p.deploymentClass!=='physical deployment'?`<small class="workflow-type">${esc(r.p.deploymentClass)}</small>`:''}<div class="workflow-evidence">${r.p.company&&r.p.companyId?`${r.p.website?link(r.p.website,'Company website ↗'):''}`:local(r.p.deep?'lab-project':'projects','Evidence ↗',r.p.id)} ${r.p.repo?link(r.p.repo,'Code ↗'):''}</div>${chosen.length?`<small class="label-match">${chosen.map(id=>{const l=report.practiceLabels.find(l=>l.id===id),m=labelMember(l,r.p.id,basis);return `<span title="${esc(m?.evidence||l.name)}">${esc(l.name)}${m?.basis==='option'?' · option/support':m?.basis==='hiring'?' · hiring evidence':m?.basis==='mention'?' · source mention':''}</span> ${refs(m?.sources||[])}`}).join('<br>')}</small>`:''}</td>${fields[dim].map(([,key,i])=>`<td>${practiceCell(r.sys[key][i])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5">No matching setups in the reviewed evidence.</td></tr>'}</tbody></table></div>
  ${selected&&rows.length===1?`<section class="workflow-boundary">${dim==='hardware'?`<strong>Deployment</strong>${practiceCell(rows[0].sys.hardware[0])}`:''}<strong>Inspection boundary</strong>${surveyCell(rows[0].sys[dim==='overview'?'hardware':dim][4])}</section>`:''}`;
 }
@@ -173,11 +173,35 @@ function currentSynthesis(){
 function setupMobileControls(){
  const table=document.querySelector('.survey-table'),button=document.querySelector('#toggle-survey-controls');
  if(!table||!button)return;
+ const panel=document.querySelector('.label-summary');
+ let mechanismButton;
+ function showMechanisms(open){
+  mechanismsOpen=open;
+  panel?.classList.toggle('mechanisms-open',open);
+  mechanismButton?.setAttribute('aria-expanded',String(open));
+ }
+ if(panel){
+  panel.id='mechanisms-panel';
+  mechanismButton=document.createElement('button');
+  mechanismButton.type='button';mechanismButton.className='mechanisms-toggle';
+  mechanismButton.textContent='Mechanisms';
+  mechanismButton.setAttribute('aria-controls',panel.id);
+  button.before(mechanismButton);
+  mechanismButton.addEventListener('click',()=>showMechanisms(!mechanismsOpen));
+  const close=document.createElement('button');close.type='button';close.className='mechanisms-close';
+  close.textContent='×';close.setAttribute('aria-label','Close mechanisms');
+  panel.querySelector('.label-summary-head').append(close);
+  close.addEventListener('click',()=>{showMechanisms(false);mechanismButton.focus()});
+  panel.addEventListener('keydown',e=>{if(e.key==='Escape'){showMechanisms(false);mechanismButton.focus()}});
+  showMechanisms(mechanismsOpen);
+ }
+
  const mobile=()=>matchMedia('(max-width: 750px)').matches;
  if(mobile())document.querySelector('#census-filter input[name="q"]').placeholder='Search…';
  let last=table.scrollTop,travel=0,settling=false;
  function fold(value){
   if(!mobile())return;
+  if(value)showMechanisms(false);
   document.body.classList.toggle('controls-folded',value);
   button.setAttribute('aria-expanded',String(!value));
   button.textContent=value?'Show controls ↓':'Hide controls ↑';
@@ -188,6 +212,7 @@ function setupMobileControls(){
  table.addEventListener('scroll',()=>{
   const y=table.scrollTop,delta=y-last;last=y;
   if(!mobile()||settling||!delta)return;
+  if(delta>0)showMechanisms(false);
   travel=Math.sign(delta)===Math.sign(travel)?travel+delta:delta;
   if(document.body.classList.contains('controls-folded')){
    if(travel < -28||y===0)fold(false);
