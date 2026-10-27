@@ -6,7 +6,7 @@ A source-linked survey of onboard compute, operating systems, resource controls,
 
 ## Explore
 
-- **Current practices:** filter workflows by country, organization type, technology labels, and text; compare compute, resources/IPC, lifecycle, and recording details.
+- **Current practices:** include or exclude labs and filter workflows by technology labels and text; compare compute, resources/IPC, lifecycle, and recording details.
 - **Synthesis:** inspect evidence counts and follow them back to matching workflows.
 - **Sources:** follow public papers, repositories, documentation, and company disclosures.
 - URLs preserve the selected view and filters. `labs.html` also serves the application.

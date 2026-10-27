@@ -65,3 +65,19 @@ svg.bar-track{width:100%;display:block}rect.basis-documented{fill:#0969da}rect.b
  .mechanisms-open .label-group{padding:8px 0}.mechanisms-open .label-chip{padding:8px;flex-wrap:wrap}
  .mechanisms-open .label-rule{flex-shrink:0;padding-top:8px}
 }
+
+/* One population switch and a quiet, icon-led mechanisms control. */
+.census-filters .labs-toggle{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;position:relative;font-size:12px;cursor:pointer;padding:6px 0 6px 8px}
+.census-filters .labs-toggle input{position:absolute;inset:0;width:100%;height:100%;min-width:0;margin:0;padding:0;opacity:0;flex:none;cursor:pointer;z-index:1}
+.toggle-track{width:30px;height:18px;border-radius:12px;background:#8c959f;position:relative;flex-shrink:0}
+.toggle-track:after{content:'';position:absolute;width:14px;height:14px;top:2px;left:2px;border-radius:50%;background:white;transition:transform .15s}
+.labs-toggle input:checked+.toggle-track{background:#0969da}.labs-toggle input:checked+.toggle-track:after{transform:translateX(12px)}
+.labs-toggle input:focus-visible+.toggle-track{outline:2px solid #0969da;outline-offset:3px}
+@media(max-width:750px){
+ .census-filters input[name="q"]{width:auto;flex:1;min-width:0}.census-filters .labs-toggle{font-size:11px;gap:6px;padding-left:4px}
+ .mobile-controls-bar button.mechanisms-toggle{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:20px;padding:8px 12px;background:#f0f6fc;color:#0550ae;font-weight:600;font-size:11px;box-shadow:inset 0 0 0 1px #0969da18}
+ .mechanisms-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}.mechanisms-toggle svg circle{fill:#f0f6fc}
+ .mechanisms-chevron{display:inline-block;transform:rotate(180deg);font-size:14px;line-height:12px}.mechanisms-toggle[aria-expanded="true"] .mechanisms-chevron{transform:none}
+ .mobile-controls-bar button.mechanisms-toggle:hover{background:#ddf4ff}
+}
+@media(prefers-reduced-motion:reduce){.toggle-track:after{transition:none}}

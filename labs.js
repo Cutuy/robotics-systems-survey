@@ -43,7 +43,7 @@ function labelSummary(base,dim,q,url){
  return `<section class="label-summary" aria-label="Practice label counts"><div class="label-summary-head"><strong>Mechanisms <span>· ${base.length} workflows${chosen.length?' before label filters':''}</span></strong><input id="label-search" aria-label="Find a label" placeholder="Find a mechanism…">${chosen.length?`<a href="${url({labels:'',page:0})}">Clear labels</a>`:''}</div><div class="label-counts">${groups.map(group=>`<div class="label-group"><strong>${esc(group)}</strong><div>${labels.filter(l=>(l.group||'Other')===group).map(chip).join('')}</div></div>`).join('')}</div>${chosen.length?'<span class="label-rule">Matching every selected label</span>':''}</section>`
 }
 function censusView(){
- const q=new URLSearchParams(location.search),cohort=q.get('cohort')||'',search=(q.get('q')||'').toLowerCase(),country=q.get('country')||'',stage=q.get('stage')||'survey',kind=q.get('kind')||'all',dimension=q.get('dimension')||'overview';
+ const q=new URLSearchParams(location.search),cohort=q.get('cohort')||'',search=(q.get('q')||'').toLowerCase(),country='',stage='all',kind=q.get('kind')||'all',dimension=q.get('dimension')||'overview';
  const fields={overview:[['▣ Robot-side compute','hardware',0],['⚙ OS / execution','runtime',0],['↻ Launch / supervision','lifecycle',0],['◉ Recording / artifacts','recording',0]],hardware:[['CPU / cores','hardware',1],['GPU / CUDA','hardware',2],['RAM / topology','hardware',3]],runtime:[['OS / execution','runtime',0],['Resource policy','runtime',2],['IPC / concurrency','runtime',3],['Timing','runtime',4]],lifecycle:[['Launch / ownership','lifecycle',0],['Restart / cancellation','lifecycle',1],['Readiness / operation','lifecycle',2],['Process / machine boundary','lifecycle',3]],recording:[['Capture / format','recording',0],['Buffers / episode structure','recording',1],['Persistence / replay','recording',2],['Integrity / provenance','recording',3]]};
  const dim=fields[dimension]?dimension:'overview',all=[...surveyRows(),...report.profiles.filter(p=>!report.systems.primaryProjects.includes(p.id)).map(p=>({p:{...p,deploymentClass:'simulation'},sys:report.systems.projects[p.id],name:p.org,country:'',search:[p.name,p.org,...Object.values(report.systems.projects[p.id]).flat().map(c=>c.value)].join(' ').toLowerCase()}))],leads=stage==='leads'||stage==='failed',selected=q.get('project');
  if(selected&&!all.some(r=>r.p.id===selected)){const p=report.profiles.find(p=>p.id===selected);if(p&&report.systems.projects[p.id])all.push({p,sys:report.systems.projects[p.id],name:p.org,country:'',search:[p.name,p.org].join(' ').toLowerCase()})}
@@ -53,23 +53,28 @@ function censusView(){
  rows.sort((a,b)=>(a.p?.name||a.name||'').localeCompare(b.p?.name||b.name||''));
  const url=(changes)=>{const u=new URLSearchParams(q);u.set('view','practices');for(const [k,v]of Object.entries(changes))if(k!=='page')u.set(k,v);u.delete('page');return '?'+u};
  return `<div class="mobile-controls-bar"><span>${rows.length} workflows · ${esc(dim==='runtime'?'Resources & IPC':dim.charAt(0).toUpperCase()+dim.slice(1))}</span></div><div id="survey-controls"><div class="survey-heading"><h2>Current practices <span>${rows.length}</span></h2>${cohort?`<a href="${url({cohort:''})}">All workflows</a>`:''}${selected?`<a href="${url({project:'',page:0})}">← All workflows</a>`:''}</div>
- <form id="census-filter" class="census-filters"><input name="q" aria-label="Search current practices" placeholder="Search hardware, software, or workflow…" value="${esc(q.get('q')||'')}"><input type="hidden" name="dimension" value="${dim}">${cohort?`<input type="hidden" name="cohort" value="${esc(cohort)}">`:""}<input type="hidden" name="labels" value="${esc(q.get('labels')||'')}">${selected?`<input type="hidden" name="project" value="${esc(selected)}">`:""}<select name="kind" aria-label="Research population"><option value="all" ${kind==='all'?'selected':''}>Labs + companies</option><option value="labs" ${kind==='labs'?'selected':''}>Labs / projects</option><option value="companies" ${kind==='companies'?'selected':''}>Companies</option></select><select name="country" aria-label="Country"><option value="">All countries</option>${[...new Set([...report.census.labs.map(r=>r.country),...all.map(r=>r.country)].filter(Boolean))].sort().map(c=>`<option ${c===country?'selected':''}>${esc(c)}</option>`).join('')}</select><select name="stage" aria-label="Evidence filter"><option value="survey" ${stage==='survey'?'selected':''}>Physical / company evidence</option><option value="all" ${stage==='all'?'selected':''}>Include reference workflows</option></select></form>
+ <form id="census-filter" class="census-filters"><input name="q" aria-label="Search current practices" placeholder="Search hardware, software, or workflow…" value="${esc(q.get('q')||'')}"><input type="hidden" name="dimension" value="${dim}">${cohort?`<input type="hidden" name="cohort" value="${esc(cohort)}">`:""}<input type="hidden" name="labels" value="${esc(q.get('labels')||'')}">${selected?`<input type="hidden" name="project" value="${esc(selected)}">`:""}<label class="labs-toggle"><input type="checkbox" name="include_labs" role="switch" ${kind!=='companies'?'checked':''}><span class="toggle-track" aria-hidden="true"></span><span>Include labs</span></label></form>
  ${leads?'':`<div class="dimension-tabs">${Object.entries({overview:'Overview',hardware:'▣ Compute',runtime:'⚙ Resources & IPC',lifecycle:'↻ Lifecycle',recording:'◉ Recording'}).map(([k,v])=>`<a class="button ${dim===k?'selected':''}" href="${url({dimension:k,page:0})}">${v}</a>`).join('')}</div>`}
  </div>${leads?'':labelSummary(baseRows,dim,q,url)}
  <div class="table-wrap survey-table"><table><thead><tr><th>${leads?'Lab / group':'Workflow / evidence'}</th>${leads?'<th>Research area</th><th>Source access</th><th>Next sources</th>':fields[dim].map(f=>`<th>${f[0]}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>leads?`<tr><td><strong>${link(r.url,r.name)}</strong><p>${esc(r.institution)} · ${esc(r.country)}</p></td><td>${esc(r.area)}</td><td>${tag(r.status==='Page fetched'?'Landing page reviewed':'Fetch failed',r.status==='Page fetched'?'':'amber')}<p>${r.deepReview?esc(r.deepReview.status)+' · '+esc(r.deepReview.followup):r.status==='Page fetched'?'Paper / repository investigation remains open.':esc(r.error)}</p></td><td>${r.links.slice(0,3).map(l=>link(l.url,l.title.slice(0,60))).join('<br>')}</td></tr>`:`<tr><td><strong><a href="${url({project:r.p.id,page:0})}">${esc(r.p.name)}</a></strong><p>${esc(r.p.org||r.name)} · ${esc(r.p.year)}</p>${r.p.company&&r.p.basics?`<small>${esc(r.p.basics)}</small>`:''}${r.p.deploymentClass&&r.p.deploymentClass!=='physical deployment'?`<small class="workflow-type">${esc(r.p.deploymentClass)}</small>`:''}<div class="workflow-evidence">${r.p.company&&r.p.companyId?`${r.p.website?link(r.p.website,'Company website ↗'):''}`:local(r.p.deep?'lab-project':'projects','Evidence ↗',r.p.id)} ${r.p.repo?link(r.p.repo,'Code ↗'):''}</div>${chosen.length?`<small class="label-match">${chosen.map(id=>{const l=report.practiceLabels.find(l=>l.id===id),m=labelMember(l,r.p.id,basis);return `<span title="${esc(m?.evidence||l.name)}">${esc(l.name)}${m?.basis==='option'?' · option/support':m?.basis==='hiring'?' · hiring evidence':m?.basis==='mention'?' · source mention':''}</span> ${refs(m?.sources||[])}`}).join('<br>')}</small>`:''}</td>${fields[dim].map(([,key,i])=>`<td>${practiceCell(r.sys[key][i])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5">No matching setups in the reviewed evidence.</td></tr>'}</tbody></table></div>
  ${selected&&rows.length===1?`<section class="workflow-boundary">${dim==='hardware'?`<strong>Deployment</strong>${practiceCell(rows[0].sys.hardware[0])}`:''}<strong>Inspection boundary</strong>${surveyCell(rows[0].sys[dim==='overview'?'hardware':dim][4])}</section>`:''}`;
 }
-function applyPracticeFilters(form){
+function practiceFilterParams(form){
  const q=new URLSearchParams(new FormData(form));
+ q.set('kind',form.elements.include_labs.checked?'all':'companies');
+ q.delete('include_labs');return q;
+}
+function applyPracticeFilters(form){
+ const q=practiceFilterParams(form);
  q.set('view','practices');q.delete('page');
  history.pushState({},'','?'+q);render();
 }
 document.addEventListener('submit',e=>{if(e.target.id==='census-filter'){e.preventDefault();applyPracticeFilters(e.target)}});
-document.addEventListener('change',e=>{if(e.target.matches('#census-filter select'))applyPracticeFilters(e.target.form)});
+document.addEventListener('change',e=>{if(e.target.matches('#census-filter input[type=checkbox]'))applyPracticeFilters(e.target.form)});
 document.addEventListener('input',e=>{
  if(!e.target.matches('#census-filter input[name="q"]'))return;
  const input=e.target,start=input.selectionStart,end=input.selectionEnd;
- const q=new URLSearchParams(new FormData(input.form));q.set('view','practices');q.delete('page');
+ const q=practiceFilterParams(input.form);q.set('view','practices');q.delete('page');
  history.replaceState({},'','?'+q);render();
  const next=document.querySelector('#census-filter input[name="q"]');next.focus();next.setSelectionRange(start,end);
 });
@@ -82,6 +87,7 @@ function render(){
  if(['overview','comparison','findings','product','contacts'].includes(view))view='synthesis';
  if(view==='projects'&&!q.get('project'))view='practices';
  if(!['practices','synthesis','sources','projects','lab-project'].includes(view))view='practices';
+ if(view==='practices'){q.delete('country');q.delete('stage');history.replaceState({},'','?'+q)}
  if(q.get('view')!==view){q.set('view',view);history.replaceState({},'','?'+q)}
  document.body.classList.remove('controls-folded');document.body.dataset.view=view;const views=[['practices','Current practices'],['synthesis','Synthesis'],['sources','Sources']];
  const active=['projects','lab-project'].includes(view)?'practices':view;
@@ -184,7 +190,7 @@ function setupMobileControls(){
   panel.id='mechanisms-panel';
   mechanismButton=document.createElement('button');
   mechanismButton.type='button';mechanismButton.className='mechanisms-toggle';
-  mechanismButton.textContent='Mechanisms';
+  mechanismButton.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/><circle cx="7" cy="5" r="2"/><circle cx="13" cy="10" r="2"/><circle cx="8" cy="15" r="2"/></svg><span>Mechanisms</span><span class="mechanisms-chevron" aria-hidden="true">⌃</span>';
   mechanismButton.setAttribute('aria-controls',panel.id);
   bar.append(mechanismButton);
   mechanismButton.addEventListener('click',()=>showMechanisms(!mechanismsOpen));
