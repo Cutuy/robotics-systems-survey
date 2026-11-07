@@ -15,7 +15,7 @@ const context=vm.createContext({URL,URLSearchParams,console,DATA:data,location,
  window:{addEventListener(){}},fetch:()=>new Promise(()=>{})});
 
 // Arrange: use the same script order as both HTML entry points.
-for(const file of ['corl-summary.js','labs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+for(const file of ['corl-summary.js','synthesis.js','labs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 vm.runInContext('report=DATA;',context);
 
 // Act: enter the summary through the actual application router.
@@ -32,7 +32,7 @@ assert(!/evidence-bar|bar-track/.test(html));
 const chapters=['compute','software','communication','timing','operations','data'];
 for(const chapter of chapters){
  assert(html.includes(`id="summary-${chapter}"`));
- assert(html.includes(`href="#summary-${chapter}"`));
+ assert(html.includes(`section=${chapter}`));
  assert(html.includes(`aria-labelledby="summary-${chapter}-title"`));
 }
 assert.equal((html.match(/class="cs-topology"/g)??[]).length,3);
