@@ -15,7 +15,7 @@ const context=vm.createContext({URL,URLSearchParams,console,DATA:data,location,
  window:{addEventListener(){}},fetch:()=>new Promise(()=>{})});
 
 // Arrange: use the same script order as both HTML entry points.
-for(const file of ['corl-summary.js','synthesis.js','labs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+for(const file of ['site.js','corl-summary.js','synthesis.js','labs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 vm.runInContext('report=DATA;',context);
 
 // Act: enter the summary through the actual application router.
@@ -24,7 +24,7 @@ const html=nodes.get('#main').innerHTML;
 
 // Assert: chapters, diagrams and every evidence destination exist.
 assert.equal(context.document.body.dataset.view,'corl-summary');
-assert(nodes.get('#nav').innerHTML.includes('aria-current="page" href="?view=corl-summary"'));
+assert(nodes.get('#nav').innerHTML.includes('aria-current="page" href="./corl-summary.html"'));
 assert(html.includes('Explore 571 entries'));
 assert(!/undefined|NaN/.test(html));
 assert(!/\p{Extended_Pictographic}/u.test(html),'Summary must use drawn glyphs, not emoji');

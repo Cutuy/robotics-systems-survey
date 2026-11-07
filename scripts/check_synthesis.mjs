@@ -12,7 +12,7 @@ const context=vm.createContext({URL,URLSearchParams,console,DATA:data,location,
  history:{replaceState(_s,_t,url){location.search=url},pushState(){}},
  document:{addEventListener(){},querySelector:key=>nodes.get(key)??null,body:{classList:{remove(){}},dataset:{}}},
  window:{addEventListener(){}},fetch:()=>new Promise(()=>{})});
-for(const file of ['corl-summary.js','synthesis.js','labs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+for(const file of ['site.js','corl-summary.js','synthesis.js','labs.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
 vm.runInContext('report=DATA;',context);
 const render=query=>{location.search=query;vm.runInContext('render()',context);return nodes.get('#main').innerHTML};
 const queries=html=>[...html.matchAll(/href="(\?[^\"]+)"/g)].map(match=>new URLSearchParams(match[1].slice(1).replaceAll('&amp;','&')));
