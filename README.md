@@ -10,6 +10,7 @@ A source-linked survey of onboard compute, operating systems, resource controls,
 - **Synthesis:** inspect evidence counts and follow them back to matching workflows.
 - **Sources:** follow public papers, repositories, documentation, and company disclosures.
 - URLs preserve the selected view and filters. `labs.html` also serves the application.
+- [CoRL 2026 additions](https://cutuy.github.io/robotics-systems-survey/?view=practices&cohort=corl-2026-full-scan): 571 source-linked records; [findings and review scope](docs/corl-2026.md).
 
 This is a research snapshot. Individual records distinguish documented implementations, platform options, hiring evidence, and inferences. Source links retain their original targets; upstream material may change.
 
@@ -29,6 +30,8 @@ Open `http://localhost:8080/`. There is no build step, backend, account system, 
 - `labs.js` and `labs.css`: navigation, filtering, counts, and presentation.
 - `lab-research.json`: survey records, technology labels, and source references.
 - `.nojekyll`: enables direct static-file publication on GitHub Pages.
+
+Run `node scripts/check_survey.mjs` after data or renderer changes.
 
 Update research records and their source references together. Label counts are computed from the data at runtime. Preserve stable record IDs so existing deep links continue to work.
 

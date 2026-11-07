@@ -1,4 +1,5 @@
 'use strict';
+const EMPTY_CELL = '-';
 let report,mechanismsOpen=true;const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const link=(url,text)=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(text)}</a>`;
 const refs=ids=>`<span class="refs">${ids.map(id=>{let i=report.sources.findIndex(s=>s.id===id),s=report.sources[i];return s?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" title="${esc(s.title)}" aria-label="Source ${i+1}: ${esc(s.title)}">${i+1}</a>`:''}).join('')}</span>`;
@@ -8,6 +9,8 @@ function projects(id){let p=report.profiles.find(x=>x.id===id)||report.profiles[
 function researchMetrics(){const rows=surveyRows().filter(r=>!r.p.deploymentClass||r.p.deploymentClass==='physical deployment');return `<section class="research-metrics"><p>Documented in ${rows.length} reviewed physical workflows</p><div>${['orin','ram16','mcap','hdf5','episode-save','rt'].map(id=>{const l=report.practiceLabels?.find(x=>x.id===id);if(!l)return '';const n=rows.filter(r=>labelMember(l,r.p.id,'documented')).length;return `<a href="?view=practices&dimension=${l.dimension}&labels=${id}"><strong>${n}</strong><span>${esc(l.name)}</span></a>`}).join('')}</div></section>`}
 function sourcesView(){return `<p class="eyebrow">AUDIT TRAIL</p><h2>Sources behind the current survey</h2><p>${surveyRows().length} workflow records · ${report.sources.length} source entries</p><ol class="sources">${report.sources.map(s=>`<li>${link(s.url,s.title)}${s.sha256?`<div class="small muted">Cached · SHA-256 ${esc(s.sha256.slice(0,16))}…</div>`:''}</li>`).join('')}</ol>`}
 function deepCell(p,key){
+ if(p[key]===EMPTY_CELL)return {value:EMPTY_CELL,status:'',sources:[]};
+ if(p.fieldEvidence?.[key])return {value:p[key],status:p.fieldEvidence[key],sources:p.fieldRefs?.[key]||[]};
  if(!p[key])return {value:'Not reviewed',status:'Not reviewed',sources:[]};
  if(/^(unknown|unreported|unspecified)\.?$/i.test(p[key].trim()))return {value:'Unreported',status:'Unknown',sources:[]};
  const value=p[key];
@@ -29,10 +32,10 @@ function surveyRows(){
 }
 function deepProject(id){
  const p=report.deepSurvey?.projects.find(p=>p.id===id);if(!p)return '<p>Deployment record unavailable.</p>';
- const labels={compute:'▣ Compute & placement',software:'⚙ OS & execution',resources:'Resource policy',ipc:'IPC & timing',lifecycle:'↻ Process lifecycle',recording:'◉ Recording & format',provenance:'Session provenance',limitations:'Inspection limits'};
+ const labels={compute:'▣ Compute & placement',cpu:'CPU',gpu:'GPU',memory:'Memory',software:'⚙ OS & execution',resources:'Resource policy',ipc:'IPC',timing:'Timing',lifecycle:'↻ Process lifecycle',recovery:'Recovery',readiness:'Readiness',placement:'Process / machine boundary',recording:'◉ Recording & format',buffering:'Buffering',replay:'Replay',provenance:'Session provenance',limitations:'Inspection limits'};
  return `<div class="section-head"><div><p class="eyebrow">${esc(p.labName)} · ${esc(p.country)}</p><h2>${esc(p.name)}</h2><p class="small">${esc(p.year||'Active repository')} · Reviewed ${esc(p.reviewed)}</p></div><div>${link(p.url,'Project ↗')} ${p.repo?link(p.repo,'Repository ↗'):''}</div></div><div class="system-detail">${Object.entries(labels).map(([k,v])=>`<section class="card"><h3>${v}</h3>${surveyCell(deepCell(p,k))}</section>`).join('')}</div><h3 style="margin-top:20px">Evidence inspected</h3><div class="grid">${p.sources.map(source=>`<section class="card"><strong>${link(source.url,source.title||source.url)}</strong><p>${esc(source.evidence||'Linked primary source')}</p></section>`).join('')}</div>`;
 }
-function surveyCell(c){return `<div class="survey-fact">${tag(c.status,/Unknown|Not reviewed|pending|verification|hypothesis|Proposed|Scope|Open question|open questions|inference/.test(c.status)?'amber':'blue')}<div>${esc(c.value)}</div>${refs(c.sources)}</div>`}
+function surveyCell(c){if(c.value===EMPTY_CELL)return EMPTY_CELL;return `<div class="survey-fact">${tag(c.status,/Unknown|Not reviewed|pending|verification|hypothesis|Proposed|Scope|Open question|open questions|inference/.test(c.status)?'amber':'blue')}<div>${esc(c.value)}</div>${refs(c.sources)}</div>`}
 function practiceCell(c){return `<div class="practice-fact">${esc(c.value)}</div>${refs(c.sources)}`}
 function labelMember(label,id,basis){return label.members.find(m=>m.id===id&&(basis==='all'||m.basis==='documented'))}
 function labelSummary(base,dim,q,url){
@@ -93,7 +96,7 @@ function render(){
  const active=['projects','lab-project'].includes(view)?'practices':view;
  $('#nav').innerHTML=views.map(([id,label])=>`<a class="${id===active?'active':''}" ${id===active?'aria-current="page"':''} href="?view=${id}">${label}</a>`).join('');
  $('#main').innerHTML=({practices:censusView,synthesis:currentSynthesis,sources:sourcesView,projects:()=>projects(q.get('project')),'lab-project':()=>deepProject(q.get('project'))}[view])();
- $('#status').textContent='Research snapshot · '+(report.cellAudit?.date||'2026-10-25')+' · '+report.sources.length+' source entries';$('#main').scrollTop=0;setupMobileControls();
+ $('#status').textContent='Research snapshot · '+(report.reviewed||report.cellAudit?.date||'2026-10-25')+' · '+report.sources.length+' source entries';$('#main').scrollTop=0;setupMobileControls();
  document.title='Robotics Systems Survey · '+(views.find(v=>v[0]===active)?.[1]||'Workflow');
 }
 document.addEventListener('click',e=>{const a=e.target.closest('a');if(a&&a.getAttribute('href')?.startsWith('?')&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey){e.preventDefault();history.pushState({},'',a.href);render()}});window.addEventListener('popstate',()=>report&&render());fetch('./lab-research.json').then(r=>{if(!r.ok)throw Error('Report unavailable');return r.json()}).then(d=>{report=d;render()}).catch(e=>{$('#main').innerHTML=`<p class="empty">Unable to load the research. ${esc(e.message)} Please refresh.</p>`});
@@ -166,7 +169,7 @@ function currentSynthesis(){
  const caseHtml=cases.map(({id,name,cells})=>{const r=all.find(r=>r.p.id.includes(id));if(!r)return '';return `<tr><th scope="row"><a href="?view=practices&project=${encodeURIComponent(r.p.id)}&dimension=overview">${name} ↗</a></th>${cells.map(([text,dim,index])=>`<td><a class="lifecycle-evidence" href="?view=practices&project=${encodeURIComponent(r.p.id)}&dimension=${dim}">${esc(text)}</a>${refs(r.sys[dim][index].sources)}</td>`).join('')}</tr>`}).join('');
 
  return `<div class="section-head"><div><p class="eyebrow">EVIDENCE → INSIGHTS</p><h2>Where a shared experiment layer could earn its place</h2></div><div class="insight-population">${[['all','All workflows'],['labs','Labs / projects'],['companies','Companies']].map(([id,label])=>`<a class="button ${scope===id?'selected':''}" href="?view=synthesis&population=${id}">${label}</a>`).join('')}</div></div>
- <div class="insight-context"><strong>${rows.length} workflow records</strong><span>Research snapshot ${esc(report.cellAudit.date)}</span><span>Chart counts track evidence coverage in this survey.</span></div>
+ <div class="insight-context"><strong>${rows.length} workflow records</strong><span>Research snapshot ${esc(report.reviewed||report.cellAudit.date)}</span><span>Chart counts track evidence coverage in this survey.</span></div>
  <div class="insight-cards">${cards.map(([glyph,title,data,implication])=>`<article><span class="insight-glyph">${glyph}</span><h3>${title}</h3><p>${data}</p><strong>${implication}</strong></article>`).join('')}</div>
  <div class="insight-legend">${Object.entries(colors).map(([id,name])=>`<span><i class="basis-${id}"></i>${name}</span>`).join('')}<span>One count per workflow per label · labels can overlap</span></div>
  <div class="insight-charts">${chart('◉ Recording formats',formatIds,'Multiple formats create artifact-joining work.')}${chart('↻ Launch & supervision',['ros-launch','docker','systemd','tmux'],'These mechanisms can coexist within one deployment.')}${chart('⚙ Execution ecosystem',['ros2','ros1','orin','x86'],'Framework and hardware tags identify integration surfaces.')}</div>
