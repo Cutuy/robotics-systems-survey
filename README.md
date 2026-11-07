@@ -34,6 +34,14 @@ Open `http://localhost:8080/`. There is no build step, backend, account system, 
 
 Run `node scripts/check_survey.mjs` after data or renderer changes; `node scripts/check_summary.mjs` checks the CoRL summary; `node scripts/check_synthesis.mjs` checks both summaries’ section controls, population filters and evidence links.
 
+After CSS changes, check both summary layouts in Chromium using an existing Playwright installation:
+
+```sh
+node scripts/check_layout.mjs --playwright /path/to/playwright/index.mjs --browser /path/to/chromium --url http://localhost:8080/
+```
+
+Add `--screenshots /tmp/survey-layout` to save desktop and mobile previews.
+
 Update research records and their source references together. Label counts are computed from the data at runtime. Preserve stable record IDs so existing deep links continue to work.
 
 ## GitHub Pages
