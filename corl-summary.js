@@ -1,11 +1,12 @@
 'use strict';
 const CORL_SUMMARY_COHORT = 'corl-2026-full-scan';
 const CORL_SUMMARY_CHAPTERS = [
- ['compute','Compute','hardware'], ['software','Software','runtime'],
- ['communication','Communication','runtime'], ['timing','Timing','runtime'],
- ['operations','Processes','lifecycle'], ['data','Data & replay','recording'],
+ ['compute','Compute','compute'], ['software','Software','software'],
+ ['communication','Communication','communication'], ['timing','Timing','timing'],
+ ['operations','Lifecycle','operations'], ['data','Recording','data'],
 ];
 const CORL_SUMMARY_GLYPHS = {
+ overview:'<rect x="3" y="3" width="10" height="10" rx="2"/><rect x="19" y="3" width="10" height="10" rx="2"/><rect x="3" y="19" width="10" height="10" rx="2"/><rect x="19" y="19" width="10" height="10" rx="2"/>',
  compute:'<rect x="7" y="7" width="18" height="18" rx="3"/><path d="M12 2v5m8-5v5M12 25v5m8-5v5M2 12h5m-5 8h5m18-8h5m-5 8h5"/><rect x="12" y="12" width="8" height="8" rx="1"/>',
  software:'<path d="m11 8-8 8 8 8m10-16 8 8-8 8M18 5l-4 22"/>',
  communication:'<rect x="2" y="11" width="8" height="10" rx="2"/><rect x="22" y="2" width="8" height="10" rx="2"/><rect x="22" y="20" width="8" height="10" rx="2"/><path d="M10 16h6V7h6m-6 9v9h6"/>',
@@ -24,8 +25,17 @@ function summaryTopic(title,body,evidence=''){
 }
 function summarySpecs(rows){return `<dl class="cs-specs">${rows.map(([key,value])=>`<div><dt>${key}</dt><dd>${value}</dd></div>`).join('')}</dl>`}
 function summaryChapter(id,title,intro,content){
- const chapter=CORL_SUMMARY_CHAPTERS.findIndex(item=>item[0]===id);
- return `<section class="cs-chapter" id="summary-${id}" aria-labelledby="summary-${id}-title"><div class="cs-chapter-head"><span class="cs-index">0${chapter+1}</span>${summaryGlyph(id)}<h2 id="summary-${id}-title">${title}</h2><p>${intro}</p></div><div class="cs-chapter-body">${content}</div></section>`;
+ return `<section class="cs-chapter" id="summary-${id}" aria-labelledby="summary-${id}-title"><div class="cs-chapter-head">${summaryGlyph(id)}<h2 id="summary-${id}-title">${title}</h2><p>${intro}</p></div><div class="cs-chapter-body">${content}</div></section>`;
+}
+function summarySelection(sections){
+ const value=new URLSearchParams(location.search).get('section');
+ return sections.some(([id])=>id===value)?value:'overview';
+}
+function summaryControls(view,sections,selected,population){
+ return `<div class="dimension-tabs cs-controls" role="group" aria-label="Summary sections">${[['overview','Overview','overview'],...sections].map(([id,label,glyph])=>{
+  const query=new URLSearchParams({view,section:id});if(population)query.set('population',population);
+  return `<a class="button ${id===selected?'selected':''}" ${id===selected?'aria-current="page"':''} href="?${esc(query)}">${summaryGlyph(glyph)}${esc(label)}</a>`;
+ }).join('')}</div>`;
 }
 function summaryTopology(kind,title,subtitle){
  const drawings={
@@ -37,7 +47,7 @@ function summaryTopology(kind,title,subtitle){
 }
 function corlSummary(){
  const records=report.deepSurvey.projects.filter(p=>p.cohort===CORL_SUMMARY_COHORT);
- const e=summaryEvidence;
+ const e=summaryEvidence,selected=summarySelection(CORL_SUMMARY_CHAPTERS);
  const compute=summaryChapter('compute','Where computation lives','From a microcontroller to a distributed workcell.',`
  <div class="cs-topologies">
  ${summaryTopology('onboard','Onboard','Sensing and inference on the robot')}
@@ -81,7 +91,7 @@ function corlSummary(){
  ${summaryTopic('Freshness & overload',summarySpecs([['Plann3r','Latest snapshots · queue size 1'],['REACT','Drop old observations; reject stale completions'],['Foci Policy recorder','100-image queue; drop frames when full']]),e('RExYYVsLbT','Plann3r','recording')+e('FFB8qNJwV2','REACT','recording')+e('AztNrTzNOf','Foci Policy','recording'))}
  </div>`);
  const operations=summaryChapter('operations','From startup to cleanup','Ownership, readiness and recovery form an explicit lifecycle.',`
- <ol class="cs-lifecycle"><li><span>01</span><strong>Start</strong><small>Launch · connect · claim devices</small></li><li><span>02</span><strong>Prepare</strong><small>Calibrate · warm up · check health</small></li><li><span>03</span><strong>Run</strong><small>Execute · monitor freshness</small></li><li><span>04</span><strong>Recover / stop</strong><small>Hold · retry · drain · release</small></li></ol>
+ <ol class="cs-lifecycle"><li><strong>Start</strong><small>Launch · connect · claim devices</small></li><li><strong>Prepare</strong><small>Calibrate · warm up · check health</small></li><li><strong>Run</strong><small>Execute · monitor freshness</small></li><li><strong>Recover / stop</strong><small>Hold · retry · drain · release</small></li></ol>
  <div class="cs-topic-grid">
  ${summaryTopic('Process ownership','<p>ROS launch, Docker Compose, tmux, SSH/nohup daemons and managed child processes.</p><p>AutoDex daemons survive trials. EagleVLA’s managed client owns server startup and shutdown.</p>',e('8CDEvBQA6x','AutoDex','lifecycle')+e('OckqYiY2QM','EagleVLA','lifecycle')+e('QAHhXvXHtb','YUBI','lifecycle')+e('RExYYVsLbT','Plann3r','lifecycle'))}
  ${summaryTopic('Readiness',summarySpecs([['Services','Health endpoints · metadata handshake'],['Hardware','First sensor data · calibration · homing'],['Model','Load · GPU warmup'],['Ownership','Reject a competing command publisher']]),e('OckqYiY2QM','EagleVLA','lifecycle')+e('FFB8qNJwV2','REACT','lifecycle')+e('0HS0to0eVo','MPC-Injection','lifecycle'))}
@@ -97,8 +107,8 @@ function corlSummary(){
  ${summaryTopic('Provenance',summarySpecs([['Identity','Run / episode IDs · frame indices'],['Time','Capture timestamps · monotonic + UTC clocks'],['Configuration','Calibration · camera serials · checkpoint tags'],['Artifacts','Source paths · SHA-256 references · outcomes']]),e('8CDEvBQA6x','AutoDex','recording')+e('7KV78k8rcv','Cloak','recording')+e('qEOv7MuWIx','Bag conversion','recording'))}
  </div>`);
  return `<div class="corl-summary"><div class="cs-hero"><div><p class="cs-kicker">CoRL 2026 / systems field guide</p><h1>Inside the robot.</h1><p class="cs-deck">Compute, execution and the evidence a run leaves behind.</p></div><a class="cs-open-table" href="?view=practices&cohort=${CORL_SUMMARY_COHORT}">Explore ${records.length} entries <svg class="cs-link-arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M3 9 9 3M3 3h6v6"/></svg></a></div>
- <div class="cs-chapter-nav" aria-label="Summary chapters">${CORL_SUMMARY_CHAPTERS.map(([id,label],index)=>`<a href="#summary-${id}"><span>0${index+1}</span>${label}</a>`).join('')}</div>
- ${compute}${software}${communication}${timing}${operations}${data}
+ ${summaryControls('corl-summary',CORL_SUMMARY_CHAPTERS,selected)}
+ ${Object.entries({compute,software,communication,timing,operations,data}).filter(([id])=>selected==='overview'||selected===id).map(([,html])=>html).join('')}
  <details class="cs-scope"><summary>Evidence scope & open questions</summary><div><p>This guide summarizes the ${records.length} CoRL additions. Examples retain paper, released-code and reference-implementation scope. A dash means the extraction establishes no mechanism for that item.</p><p>RAM, VRAM and model size have different meanings. Resource, recovery, replay and provenance fields contain some training or experimental context. Their nonempty counts require semantic cleanup before quantitative comparison.</p><p>Forty primary-source access gaps and 218 late repository leads remain. Frequency of use, reliability and adoption demand require further evidence.</p><a href="docs/corl-2026.md">Read the review methodology</a></div></details>
  </div>`;
 }

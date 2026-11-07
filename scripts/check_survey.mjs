@@ -55,6 +55,7 @@ const context = vm.createContext({URL, URLSearchParams, console, DATA: data, loc
   document: {addEventListener() {}, querySelector: key => nodes.get(key) ?? null, body: {classList: {remove() {}}, dataset: {}}},
   window: {addEventListener() {}}, fetch: () => new Promise(() => {})});
 vm.runInContext(fs.readFileSync(path.join(root, 'corl-summary.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(root, 'synthesis.js'), 'utf8'), context);
 vm.runInContext(fs.readFileSync(path.join(root, 'labs.js'), 'utf8') + '\nreport=DATA;', context);
 let checks = 0;
 function render(search) {location.search = search; vm.runInContext('render()', context); checks++; return nodes.get('#main').innerHTML}

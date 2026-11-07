@@ -8,7 +8,7 @@ A source-linked survey of onboard compute, operating systems, resource controls,
 
 - **Current practices:** include or exclude labs and filter workflows by technology labels and text; compare compute, resources/IPC, lifecycle, and recording details.
 - **CoRL summary:** a visual field guide to compute, software, communication, timing, processes, and recording, with links to supporting workflows.
-- **Synthesis:** inspect evidence counts and follow them back to matching workflows.
+- **Synthesis:** compare compute, runtime, lifecycle and recording patterns across the original survey and CoRL additions; filter examples and evidence by population.
 - **Sources:** follow public papers, repositories, documentation, and company disclosures.
 - URLs preserve the selected view and filters. `labs.html` also serves the application.
 - [CoRL 2026 additions](https://cutuy.github.io/robotics-systems-survey/?view=practices&cohort=corl-2026-full-scan): 571 source-linked records; [findings and review scope](docs/corl-2026.md).
@@ -32,7 +32,7 @@ Open `http://localhost:8080/`. There is no build step, backend, account system, 
 - `lab-research.json`: survey records, technology labels, and source references.
 - `.nojekyll`: enables direct static-file publication on GitHub Pages.
 
-Run `node scripts/check_survey.mjs` after data or renderer changes; `node scripts/check_summary.mjs` checks the visual summary and its evidence links.
+Run `node scripts/check_survey.mjs` after data or renderer changes; `node scripts/check_summary.mjs` checks the CoRL summary; `node scripts/check_synthesis.mjs` checks both summaries’ section controls, population filters and evidence links.
 
 Update research records and their source references together. Label counts are computed from the data at runtime. Preserve stable record IDs so existing deep links continue to work.
 
