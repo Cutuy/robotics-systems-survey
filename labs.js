@@ -89,13 +89,13 @@ function render(){
  if(['systems','census'].includes(view)){if(view==='systems'&&!q.has('dimension'))q.set('dimension','hardware');if(q.get('stage')==='deep'||q.get('scope')==='all')q.set('stage','all');if(q.get('stage')==='signals')q.set('stage','survey');view='practices'}
  if(['overview','comparison','findings','product','contacts'].includes(view))view='synthesis';
  if(view==='projects'&&!q.get('project'))view='practices';
- if(!['practices','synthesis','sources','projects','lab-project'].includes(view))view='practices';
+ if(!['practices','corl-summary','synthesis','sources','projects','lab-project'].includes(view))view='practices';
  if(view==='practices'){q.delete('country');q.delete('stage');history.replaceState({},'','?'+q)}
  if(q.get('view')!==view){q.set('view',view);history.replaceState({},'','?'+q)}
- document.body.classList.remove('controls-folded');document.body.dataset.view=view;const views=[['practices','Current practices'],['synthesis','Synthesis'],['sources','Sources']];
+ document.body.classList.remove('controls-folded');document.body.dataset.view=view;const views=[['practices','Current practices'],['corl-summary','CoRL summary'],['synthesis','Synthesis'],['sources','Sources']];
  const active=['projects','lab-project'].includes(view)?'practices':view;
  $('#nav').innerHTML=views.map(([id,label])=>`<a class="${id===active?'active':''}" ${id===active?'aria-current="page"':''} href="?view=${id}">${label}</a>`).join('');
- $('#main').innerHTML=({practices:censusView,synthesis:currentSynthesis,sources:sourcesView,projects:()=>projects(q.get('project')),'lab-project':()=>deepProject(q.get('project'))}[view])();
+ $('#main').innerHTML=({practices:censusView,'corl-summary':corlSummary,synthesis:currentSynthesis,sources:sourcesView,projects:()=>projects(q.get('project')),'lab-project':()=>deepProject(q.get('project'))}[view])();
  $('#status').textContent='Research snapshot · '+(report.reviewed||report.cellAudit?.date||'2026-10-25')+' · '+report.sources.length+' source entries';$('#main').scrollTop=0;setupMobileControls();
  document.title='Robotics Systems Survey · '+(views.find(v=>v[0]===active)?.[1]||'Workflow');
 }
